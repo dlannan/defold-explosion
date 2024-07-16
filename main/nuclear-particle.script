@@ -1,0 +1,134 @@
+-- Simulate _alot_ of particles. I would like to get to 1B, but more likely around 1-10M 
+
+local atmos = require( "main.atmosphere" )
+
+-- Start with one million
+local MAX_PARTICLES 		= 20000
+local MAX_FORCE 			= 200
+local PARTICLE_MASS			= 1.0
+local PARTICLE_SIZE			= 1.0
+local TIME_SCALE 			= 1.0
+
+local INITIAL_TEMPERATURE 	= 3000
+local INITIAL_SPEED 		= 200
+local AIR_DENSITY 			= 1.225 -- kg/m^3
+local DRAG_COEFFICIENT 		= 0.47
+local GRAVITY			 	= -9.81
+
+-- Will expose to editor
+g_startpos 	= vmath.vector3(0.0, 30.0, 0.0)
+
+-- Heres our particle array 
+local g_particles = {}
+
+local function mix( start, finish, t )
+	return start * (1 - t) + finish * t
+end
+
+local function random_three_vector( scale )
+	--
+	-- Generates a random 3D unit vector (direction) with a uniform spherical distribution
+	-- Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
+	--
+	local phi = math.random() * math.pi * 2.0
+	local costheta = math.random() * 2.0 - 1.0
+
+	local theta = math.acos( costheta )
+	local x = math.sin( theta) * math.cos( phi )
+	local y = math.sin( theta) * math.sin( phi )
+	local z = math.cos( theta )
+	return vmath.vector3(x * scale , y * scale , z * scale )
+end 
+
+-- Calculate a simple air resistance model
+local function calcAirResistance( p )
+	return p.force * 0.90
+end
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	msg.post("@render:", "use_camera_projection")
+	msg.post("camera", "acquire_camera_focus")
+	local w,h = window.get_size()
+	
+	-- Keep it simple, each gets a simple pos, vel, mass
+	-- Do everything as arrays, this will keep it speedy
+	for i=1, MAX_PARTICLES do 
+		local obj = factory.create("/particles#factory", g_startpos)
+		g_particles[i] = {
+			pos = g_startpos,
+			vel = vmath.vector3(),
+			mass = PARTICLE_MASS, 				-- Not quite sure what size to use yet, depends how big this ends up.
+			p = obj,
+			force = random_three_vector(MAX_FORCE * (math.random() * 0.8 + 0.2)),
+			temp = INITIAL_TEMPERATURE - math.random() * (INITIAL_TEMPERATURE * 0.33),
+			angle = math.random() * math.pi * 2,
+			speed = math.random() * INITIAL_SPEED + (INITIAL_SPEED / 2),
+		}
+		g_particles[i].vel = random_three_vector(MAX_FORCE * (math.random() * 0.8 + 0.2))
+		g_particles[i].accel = g_particles[i].force / g_particles[i].mass + vmath.vector3(0, GRAVITY, 0) * g_particles[i].mass
+	end
+	print("ready... ")					-- When more things are happening in init, this will get longer.
+	self.ready = 1.0	-- use a 3 sec count for start (to warm up renderer :) )
+	self.started = nil
+end
+
+function final(self)
+end
+
+local tm = 0.0
+function update(self, dt)
+
+	if(tm > self.ready and self.started == nil) then self.started = true end 
+	local newdt = TIME_SCALE * dt
+	
+	if(self.started) then 
+		for i,p in ipairs(g_particles) do 
+
+			local radius = vmath.length(p.pos)
+			p.speed = vmath.length(p.vel)
+			
+			local ambientTemp = 300
+			local buoyancyForce = 0.5 * AIR_DENSITY * GRAVITY * (4/3) * math.pi * math.pow(30 / radius, 3) * (p.temp - ambientTemp) / ambientTemp;
+
+			-- Air resistance
+			local dragForce = 0.01 * AIR_DENSITY * p.speed * p.speed * DRAG_COEFFICIENT * math.pi * PARTICLE_SIZE * PARTICLE_SIZE
+			local dragDirection = vmath.vector3()
+			if(math.abs(p.speed) > 0.0) then dragDirection = -p.vel / p.speed end
+
+			-- Update velocity
+			p.vel.x = p.vel.x + (dragForce * dragDirection.x / p.mass) * newdt
+			p.vel.y = p.vel.y + (GRAVITY + dragForce * dragDirection.y / p.mass) * newdt
+			p.vel.z = p.vel.z + (dragForce * dragDirection.z / p.mass) * newdt
+						
+			-- p.force = calcAirResistance( p )
+			-- p.accel = p.force / p.mass + GRAVITY * p.mass
+			-- p.vel = p.vel + p.accel * newdt
+			p.pos = p.pos + p.vel * newdt
+			
+			if(p.pos.y < 0.0) then 
+				p.pos.y = 0.0
+				p.vel.y = -p.vel.y * 0.2
+			end
+
+			-- Thermal propagation
+			p.temp = p.temp - radius * 0.2 * newdt
+			if (p.temp < 300) then p.temp = 300 end
+			
+			go.set_position(p.pos, p.p)
+		end
+	end
+	tm = tm + dt
+end
+
+function fixed_update(self, dt)
+end
+
+function on_message(self, message_id, message, sender)
+end
+
+function on_input(self, action_id, action)
+end
+
+function on_reload(self)
+end

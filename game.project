@@ -1,0 +1,44 @@
+[bootstrap]
+main_collection = /main/nuclear-particle.collectionc
+
+[script]
+shared_state = 1
+
+[display]
+width = 1280
+height = 800
+high_dpi = 0
+fullscreen = 0
+
+[android]
+input_method = HiddenInputField
+package = com.defold.example.basic3d
+
+[project]
+dependencies = 
+title = 3D Explosion
+
+[physics]
+type = 3D
+
+[osx]
+bundle_identifier = com.defold.example.basic3d
+
+[ios]
+bundle_identifier = com.defold.example.basic3d
+
+[graphics]
+texture_profiles = /main/default.texture_profiles
+verify_graphics_calls = 1
+max_draw_calls = 32760
+
+[sprite]
+max_count = 5000000
+subpixels = 0
+
+[collection]
+max_instances = 32760
+
+[model]
+max_count = 32760
+

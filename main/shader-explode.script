@@ -1,0 +1,40 @@
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	msg.post("@render:", "use_camera_projection")
+	msg.post("camera", "acquire_camera_focus")
+
+	local f = assert(io.open("assets/images/noise.png", "rb"))
+	local data = assert(f:read("*a"))
+	f:close()
+	local image = image.load_buffer(data, { premultiply_alpha = false } )
+
+	-- Create a new buffer with 4 components and FLOAT32 type
+	local tbuffer = buffer.create(256 * 256, { {name=hash("rgba"), type=buffer.VALUE_TYPE_UINT8, count=4} } )
+
+	-- Create a 2D Texture with a RGBA23F format
+	local tparams = {
+		width          = 256,
+		height         = 256,
+		type           = resource.TEXTURE_TYPE_2D,
+		format         = resource.TEXTURE_FORMAT_RGBA,
+	}
+	pprint(image)
+	-- Note that we pass the buffer as the last argument here!
+	local my_texture_id = resource.create_texture("/explore_texture.texturec", tparams, image.buffer)
+
+	-- assign the texture to a model
+	go.set("#plane", "texture0", my_texture_id)
+	
+	self.ires = vmath.vector4( 256, 256, 0.0, 0.0 );
+end
+
+function update(self, dt)
+	self.ires.z = self.ires.z + dt
+	self.ires.w = self.ires.w + 0.1 * dt
+	if(self.ires.w > 0.99) then self.ires.w = 0.0 end
+	go.set("#plane", "iResolution", self.ires)
+end
+	
+function on_input(self, action_id, action)
+	
+end
