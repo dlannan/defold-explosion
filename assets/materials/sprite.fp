@@ -36,8 +36,8 @@ void main()
     diff_light = max(dot(var_normal,diff_light), 0.0) + ambient_light;
     diff_light = clamp(diff_light, 0.0, 1.0);
 
-    float d = length(var_world_position) * 0.01;
-    diff_light = computeColour( clamp(d, 0, 1), d );
+    float d = length(var_world_position) * 0.006;
+    diff_light = computeColour( clamp(d, 0, 1), clamp(d, 0, 1) );
     
     gl_FragColor = vec4(color.xyz * diff_light, color.a);
 }

@@ -1,0 +1,9 @@
+mesh: "/assets/sky/sphereinv.dae"
+skeleton: ""
+animations: ""
+default_animation: ""
+name: "unnamed"
+materials {
+  name: "default"
+  material: "/assets/sky/shaders/sky.material"
+}

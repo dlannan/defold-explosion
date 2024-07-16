@@ -1,6 +1,21 @@
 -- Simulate _alot_ of particles. I would like to get to 1B, but more likely around 1-10M 
+--    WARNING: Current limit is because Im using GO's. do not set above 32760! 
+--             Will attempt converting this to a compute shader so there can be millions.
+--             Current method is quite intensive, and would be better even to do with a large quad
+--             mesh stream and a shader or something similar. GO's are _not_ a recommended way
+--             to achieve this.
+
+-- Other notes:
+--   Lots of variables that can be tweaked here. Can get many interesting results.
+--   The particle quad can be replaced with a sphere or cube, but beware perf for that.
+--   The shader is quite simple, it only changes color based on radius. Ideally the temperature 
+--      decay would be used, but I had problem using tint on instances (not sure why)
+--   There is another shader here in another collection, that displays a different kind of rendering
+--      its based entirely on a Shader Toy shader. Wanted to do something similar, but I dont want 
+--      a 'render art' vs actual depth geometry.
 
 local atmos = require( "main.atmosphere" )
+local orbit = require( "utils.camera-orbit" )
 
 -- Start with one million
 local MAX_PARTICLES 		= 20000
@@ -14,6 +29,11 @@ local INITIAL_SPEED 		= 200
 local AIR_DENSITY 			= 1.225 -- kg/m^3
 local DRAG_COEFFICIENT 		= 0.47
 local GRAVITY			 	= -9.81
+local BOUNCE 				= 0.4
+
+local MOUSEX_SCALE 			= 0.03
+local MOUSEY_SCALE 			= 0.01
+local CAMWERA_DISTANCE		= 350.0
 
 -- Will expose to editor
 g_startpos 	= vmath.vector3(0.0, 30.0, 0.0)
@@ -21,9 +41,21 @@ g_startpos 	= vmath.vector3(0.0, 30.0, 0.0)
 -- Heres our particle array 
 local g_particles = {}
 
+-- -------------------------------------------------------------------------
+
 local function mix( start, finish, t )
 	return start * (1 - t) + finish * t
 end
+
+-- -------------------------------------------------------------------------
+
+local function getColor( temp )
+	local colBottom = 3.1*vmath.vector4(1.0,0.5,0.05, 0.0)
+	local colTop = 2.*vmath.vector4(0.48,0.53,0.5, 0.0)
+	return mix( colBottom, colTop, math.min( (temp/INITIAL_TEMPERATURE+.5)/1.7, 1.0 ) )
+end
+
+-- -------------------------------------------------------------------------
 
 local function random_three_vector( scale )
 	--
@@ -40,15 +72,39 @@ local function random_three_vector( scale )
 	return vmath.vector3(x * scale , y * scale , z * scale )
 end 
 
+-- -------------------------------------------------------------------------
 -- Calculate a simple air resistance model
 local function calcAirResistance( p )
 	return p.force * 0.90
 end
 
+-- -------------------------------------------------------------------------
+
 function init(self)
 	msg.post(".", "acquire_input_focus")
 	msg.post("@render:", "use_camera_projection")
 	msg.post("camera", "acquire_camera_focus")
+
+	self.skyuri 		= "/sky#sphereinv"
+	self.camerauri		= "/camera#camera"
+
+	self.luminance 		= 1.0
+	self.cloud_level 	= 300.0
+	self.time_speed 	= 1.0
+	self.sunposition 	= vmath.vector4(300, 200, -300.0, 0)
+	self.cloud_cover 	= 0.5	
+
+	self.xangle 		= nil
+	self.yangle 		= nil
+	self.lastx 			= nil
+	self.lasty 			= nil
+	
+	self.camerapos 		= go.get_position(self.camerauri)
+	
+	model.set_constant(self.skyuri, "cameraPos", vmath.vector4(self.camerapos.x,self.camerapos.y,self.camerapos.z, 0.0))	
+	model.set_constant(self.skyuri, "sunposition", self.sunposition)
+	model.set_constant(self.skyuri, "vparams", vmath.vector4(1.0, 2.0, 0.005, 0.0))
+	
 	local w,h = window.get_size()
 	
 	-- Keep it simple, each gets a simple pos, vel, mass
@@ -64,23 +120,40 @@ function init(self)
 			temp = INITIAL_TEMPERATURE - math.random() * (INITIAL_TEMPERATURE * 0.33),
 			angle = math.random() * math.pi * 2,
 			speed = math.random() * INITIAL_SPEED + (INITIAL_SPEED / 2),
+			url = msg.url(nil, obj, "model"),
 		}
 		g_particles[i].vel = random_three_vector(MAX_FORCE * (math.random() * 0.8 + 0.2))
 		g_particles[i].accel = g_particles[i].force / g_particles[i].mass + vmath.vector3(0, GRAVITY, 0) * g_particles[i].mass
 	end
-	print("ready... ")					-- When more things are happening in init, this will get longer.
+
 	self.ready = 1.0	-- use a 3 sec count for start (to warm up renderer :) )
 	self.started = nil
+
+	self.cam = orbit.init( self.camerauri, "/ground", CAMWERA_DISTANCE)
+	self.cam.xangle = 0.29 
+	self.cam.yangle = -2.7
 end
+
+-- -------------------------------------------------------------------------
 
 function final(self)
 end
+
+-- -------------------------------------------------------------------------
 
 local tm = 0.0
 function update(self, dt)
 
 	if(tm > self.ready and self.started == nil) then self.started = true end 
 	local newdt = TIME_SCALE * dt
+
+	self.cam.xangle = self.cam.xangle + self.ydiff
+	self.cam.yangle = self.cam.yangle + self.xdiff
+	self.xdiff = 0.0
+	self.ydiff = 0.0
+	self.cam:update( newdt )
+
+	model.set_constant(self.skyuri, "fparams", vmath.vector4(os.clock() * self.time_speed, self.cloud_cover, self.cloud_level, self.luminance))
 	
 	if(self.started) then 
 		for i,p in ipairs(g_particles) do 
@@ -108,27 +181,42 @@ function update(self, dt)
 			
 			if(p.pos.y < 0.0) then 
 				p.pos.y = 0.0
-				p.vel.y = -p.vel.y * 0.2
+				p.vel.y = -p.vel.y * BOUNCE
 			end
 
 			-- Thermal propagation
 			p.temp = p.temp - radius * 0.2 * newdt
 			if (p.temp < 300) then p.temp = 300 end
-			
+
+			-- go.set(p.url, "tint", getColor(p.temp)) -- this doesnt work for some reason
 			go.set_position(p.pos, p.p)
 		end
 	end
 	tm = tm + dt
 end
 
-function fixed_update(self, dt)
-end
+-- -------------------------------------------------------------------------
 
 function on_message(self, message_id, message, sender)
 end
 
+-- -------------------------------------------------------------------------
+
 function on_input(self, action_id, action)
+	
+	self.lastx = self.lastx or action.x
+	self.lasty = self.lasty or action.y
+
+	self.xdiff = (action.x - self.lastx ) * MOUSEX_SCALE
+	self.ydiff = (action.y - self.lasty ) * MOUSEY_SCALE
+	
+	self.lastx = action.x 
+	self.lasty = action.y
 end
+
+-- -------------------------------------------------------------------------
 
 function on_reload(self)
 end
+
+-- -------------------------------------------------------------------------
