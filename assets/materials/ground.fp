@@ -7,11 +7,12 @@ varying mediump vec4 var_light;
 uniform lowp sampler2D tex0;
 uniform lowp vec4 tint;
 
-vec3 distancefog( vec3 col, float pos )
+float distancefog( vec3 col, float pos )
 {
-    float len = pos / 700;
-    const vec3 endColor = vec3(0.8359, 0.88235, 0.89019);
-    return mix( col, endColor, len );
+    float len = pos / 600;
+    // const vec3 endColor = vec3(0.8359, 0.88235, 0.89019);
+    // return mix( col, endColor, len );
+    return len;
 }
 
 void main()
@@ -26,7 +27,7 @@ void main()
     diff_light = max(dot(var_normal,diff_light), 0.0) + ambient_light;
     diff_light = clamp(diff_light, 0.0, 1.0);
 
-    color.rgb = distancefog( color.rgb, abs(var_position.z));
-    gl_FragColor = vec4(color.rgb,1.0);
+    float fogalpha = distancefog( color.rgb, abs(var_position.z));
+    gl_FragColor = vec4(color.rgb, 1.0 - fogalpha);
 }
 

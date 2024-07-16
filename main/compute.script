@@ -1,0 +1,98 @@
+
+-- In a .script file
+
+-- Here we specify the input texture that we later will bind to the
+-- compute program. We can assign this texture to a model component,
+-- or enable it to the render context in the render script.
+go.property("texture_in", resource.texture())
+go.property("TEXTURE_SIZE", 256)
+
+go.property("PARTICLE_LIFETIME", 20.0)
+go.property("PARTICLE_COUNT", 20000)
+go.property("MAX_FORCE", 200)
+
+-- -------------------------------------------------------------------------
+
+local function random_three_vector( scale )
+	--
+	-- Generates a random 3D unit vector (direction) with a uniform spherical distribution
+	-- Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
+	--
+	local phi = math.random() * math.pi * 2.0
+	local costheta = math.random() * 2.0 - 1.0
+
+	local theta = math.acos( costheta )
+	local x = math.sin( theta) * math.cos( phi )
+	local y = math.sin( theta) * math.sin( phi )
+	local z = math.cos( theta )
+	return vmath.vector3(x * scale , y * scale , z * scale )
+end 
+
+-- -------------------------------------------------------------------------
+
+local function initializeParticles(self)
+	
+	-- Create a new buffer with 4 components and FLOAT32 type
+	local tbuffer = buffer.create(self.TEXTURE_SIZE * self.TEXTURE_SIZE, { {name=hash("rgba"), type=buffer.VALUE_TYPE_FLOAT32, count=4} } )
+	local tstream = buffer.get_stream(tbuffer, hash("rgba"))
+
+	-- Fill the buffer stream with some float values
+	for p = 1, self.PARTICLE_COUNT+1 do
+		local index = p * 8
+		-- Position
+		tstream[index + 0] = 0.0
+		tstream[index + 1] = 0.0
+		tstream[index + 2] = 0.0
+
+		tstream[index + 3] = self.PARTICLE_LIFETIME
+		
+		local vel = random_three_vector(self.MAX_FORCE * (math.random() * 0.8 + 0.2))
+		
+		-- Velocity 
+		tstream[index + 4] = vel.x
+		tstream[index + 5] = vel.y
+		tstream[index + 6] = vel.z
+		
+		tstream[index + 7] = 1.0 -- indicates this cell is used
+	end
+
+	return tbuffer
+end
+
+-- -------------------------------------------------------------------------
+
+function init(self)
+	self.resource_path = "/my_backing_texture.texturec"
+
+	local tbuffer = initializeParticles(self)
+	
+	self.t_header = {
+		type   = resource.TEXTURE_TYPE_IMAGE_2D,
+		width  = self.TEXTURE_SIZE,
+		height = self.TEXTURE_SIZE,
+		format = resource.TEXTURE_FORMAT_RGBA32F,
+		flags  = resource.TEXTURE_USAGE_FLAG_STORAGE + resource.TEXTURE_USAGE_FLAG_SAMPLE,
+	}
+	
+	-- Create a texture resource like usual, but add the "storage" flag
+	-- so it can be used as the backing storage for compute programs
+	self.t_backing = resource.create_texture(self.resource_path, self.t_header, tbuffer)
+
+	self.textures = {
+		texture_in = resource.get_texture_info(self.texture_in).handle,
+		texture_out = resource.get_texture_info(self.t_backing).handle
+	}
+
+	-- notify the renderer of the input and output textures
+	msg.post("@render:", "set_backing_texture", self.textures)
+	msg.post("@render:", "set_compute_texture_size", { TEXTURE_SIZE = self.TEXTURE_SIZE } )
+end
+
+-- -------------------------------------------------------------------------
+
+function update(self, dt)
+
+	go.set("#model", "texture0", self.t_backing)
+end
+
+-- -------------------------------------------------------------------------

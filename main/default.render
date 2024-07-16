@@ -1,0 +1,5 @@
+script: "/main/default.render_script"
+render_resources {
+  name: "compute"
+  path: "/assets/compute/exploder.compute"
+}

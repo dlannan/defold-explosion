@@ -1,5 +1,5 @@
 name: "model"
-tags: "ground"
+tags: "particle"
 vertex_program: "/assets/materials/sprite.vp"
 fragment_program: "/assets/materials/ground.fp"
 vertex_space: VERTEX_SPACE_LOCAL
