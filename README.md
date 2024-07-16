@@ -1,17 +1,23 @@
-# Welcome to Defold
+# Defold Explosion 
 
-This project was created from the "basic 3D" project template.
+This is a little demo made for the defold challenge here:
 
-The settings in ["game.project"](defold://open?path=/game.project) are mostly set to the default values. The render script is a modified version of the default render script with the addition that models are rendered in a separate pass before 2D components such as sprites and tilemaps. The physics type is set to 3D and not 2D.
+https://forum.defold.com/t/community-challenge-explosions/77315/25
 
-The project contains a bootstrap ["main.collection"](defold://open?path=/main/main.collection) that includes a game object with a camera component and a game object with three different models.
+Lots of things I wanted to do, heres some of them:
+- The explosion was going to have millions of particles (I might still do this). But there are limitations on the numbers of GO's and they are not really ideal for this method.
+- A nuclear explosion with a mushroom cloud was going to be physically modelled (there is some in there), with thermal propagation, air resitiance and more. I might still do this, since its an interesting physics fluid dynamics model. 
+- Mesh deformation rather than particles. Not sure if this is possible - might work better with voxels or similar.
+- Some nice smoke particles as well. 
 
-Check out [the documentation pages](https://defold.com/learn) for examples, tutorials, manuals and API docs.
+Not sure if I will revisit this. 
 
-If you run into trouble, help is available in [our forum](https://forum.defold.com).
+License is all MIT. Use it as you like in your own projects. There is included:
+- Sky rendering shader 
+- Camera orbit script - its a very simple one, if thats what you need :)
+- Some transform utilities (like camera lookats and so on)
 
-Happy Defolding!
+Feel free to hack away with this.
 
-## Credits
 
-* Textures by Kenney (https://www.kenney.nl)
+
