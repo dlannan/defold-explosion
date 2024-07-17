@@ -5,10 +5,10 @@
 -- compute program. We can assign this texture to a model component,
 -- or enable it to the render context in the render script.
 go.property("texture_in", resource.texture())
-go.property("TEXTURE_SIZE", 256)
+go.property("TEXTURE_SIZE", 128)
 
 go.property("PARTICLE_LIFETIME", 20.0)
-go.property("PARTICLE_COUNT", 20000)
+go.property("PARTICLE_COUNT", 5000)
 go.property("MAX_FORCE", 200)
 
 -- -------------------------------------------------------------------------
@@ -33,27 +33,35 @@ end
 local function initializeParticles(self)
 	
 	-- Create a new buffer with 4 components and FLOAT32 type
-	local tbuffer = buffer.create(self.TEXTURE_SIZE * self.TEXTURE_SIZE, { {name=hash("rgba"), type=buffer.VALUE_TYPE_FLOAT32, count=4} } )
+	local tbuffer = buffer.create(self.TEXTURE_SIZE * self.TEXTURE_SIZE, { 
+		{
+			name	= hash("rgba"), 
+			type	= buffer.VALUE_TYPE_FLOAT32, 
+			count	= 4,
+		} 
+	} )
+	
 	local tstream = buffer.get_stream(tbuffer, hash("rgba"))
 
 	-- Fill the buffer stream with some float values
-	for p = 1, self.PARTICLE_COUNT+1 do
-		local index = p * 8
-		-- Position
-		tstream[index + 0] = 0.0
-		tstream[index + 1] = 0.0
-		tstream[index + 2] = 0.0
+	for p = 1, self.TEXTURE_SIZE * self.TEXTURE_SIZE * 4 - 1, 4 do
+		if(p-1) % 8 == 0 then 
+			-- Position
+			tstream[p + 0] = 0.0
+			tstream[p + 1] = 0.0
+			tstream[p + 2] = 0.0
 
-		tstream[index + 3] = self.PARTICLE_LIFETIME
-		
-		local vel = random_three_vector(self.MAX_FORCE * (math.random() * 0.8 + 0.2))
-		
-		-- Velocity 
-		tstream[index + 4] = vel.x
-		tstream[index + 5] = vel.y
-		tstream[index + 6] = vel.z
-		
-		tstream[index + 7] = 1.0 -- indicates this cell is used
+			tstream[p + 3] = self.PARTICLE_LIFETIME
+		else		
+			local vel = random_three_vector(self.MAX_FORCE * (math.random() * 0.8 + 0.2))
+			
+			-- Velocity 
+			tstream[p + 0] = vel.x
+			tstream[p + 1] = vel.y
+			tstream[p + 2] = vel.z
+			
+			tstream[p + 3] = 1.0 -- indicates this cell is used
+		end
 	end
 
 	return tbuffer
@@ -62,9 +70,11 @@ end
 -- -------------------------------------------------------------------------
 
 function init(self)
-	self.resource_path = "/my_backing_texture.texturec"
+	self.resource_path = "/out_texture.texturec"
+	self.resource_path_in = "/in_texture.texturec"
 
-	local tbuffer = initializeParticles(self)
+	self.tbuffer_in = initializeParticles(self)
+	self.tbuffer_out = initializeParticles(self)
 	
 	self.t_header = {
 		type   = resource.TEXTURE_TYPE_IMAGE_2D,
@@ -76,7 +86,8 @@ function init(self)
 	
 	-- Create a texture resource like usual, but add the "storage" flag
 	-- so it can be used as the backing storage for compute programs
-	self.t_backing = resource.create_texture(self.resource_path, self.t_header, tbuffer)
+	self.t_backing = resource.create_texture(self.resource_path, self.t_header, self.tbuffer_out)
+	self.texture_in = resource.create_texture(self.resource_path_in, self.t_header, self.tbuffer_in)
 
 	self.textures = {
 		texture_in = resource.get_texture_info(self.texture_in).handle,
@@ -86,13 +97,14 @@ function init(self)
 	-- notify the renderer of the input and output textures
 	msg.post("@render:", "set_backing_texture", self.textures)
 	msg.post("@render:", "set_compute_texture_size", { TEXTURE_SIZE = self.TEXTURE_SIZE } )
+
+	go.set("#model", "texture0", self.t_backing)
 end
 
 -- -------------------------------------------------------------------------
 
 function update(self, dt)
-
-	go.set("#model", "texture0", self.t_backing)
+	-- go.set("#model", "texture0", self.t_backing)
 end
 
 -- -------------------------------------------------------------------------

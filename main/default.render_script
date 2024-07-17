@@ -136,7 +136,7 @@ local function create_state()
 end
 
 function init(self)
-    self.predicates = create_predicates("tile", "gui", "particle", "model", "debug_text", "ground")
+    self.predicates = create_predicates("tile", "gui", "particle", "model", "debug_text", "ground", "compute")
 
     -- default is stretch projection. copy from builtins and change for different projection
     -- or send a message to the render script to change projection:
@@ -163,6 +163,7 @@ function update(self, dt)
         end
     end
 
+    -- Compute stage.. ready for display next frame
     render.set_compute("compute")
     -- We can bind textures to specific named constants
     render.enable_texture("texture_in", self.texture_in)
@@ -170,14 +171,13 @@ function update(self, dt)
     local constants = render.constant_buffer()
     constants.color = vmath.vector4(0.5, 0.5, 0.5, 1.0)
     constants.params = vmath.vector4(dt, 0.5, 0.5, 1.0)
-
     -- Dispatch the compute program as many times as we have pixels.
     -- This constitutes our "working group". The shader will be invoked
     -- 128 x 128 x 1 times, or once per pixel.
     render.dispatch_compute(self.TEXTURE_SIZE, self.TEXTURE_SIZE, 1)
     -- when we are done with the compute program, we need to unbind it
-    render.set_compute()  
-        
+    render.set_compute() 
+    
     local predicates = self.predicates
     -- clear screen buffers
     --
@@ -210,8 +210,13 @@ function update(self, dt)
     render.draw(predicates.ground, camera_world.frustum)
     render.draw(predicates.tile, camera_world.frustum)
     render.draw(predicates.particle, camera_world.frustum)
-    render.disable_state(render.STATE_DEPTH_TEST)
 
+    render.enable_texture("texture_out", self.texture_out)
+    render.draw(predicates.compute, camera_world.frustum)
+    render.disable_texture("texture_out")
+    
+    render.disable_state(render.STATE_DEPTH_TEST)
+    
     render.draw_debug3d()
 
     -- render GUI
@@ -225,6 +230,11 @@ function update(self, dt)
     render.draw(predicates.debug_text, camera_gui.frustum)
     render.disable_state(render.STATE_STENCIL_TEST)
     render.disable_state(render.STATE_BLEND)
+
+    -- Switch buffers (like double buffering)
+    local temp = self.texture_in
+    self.texture_in = self.texture_out
+    self.texture_out = temp 
 end
 
 function on_message(self, message_id, message)

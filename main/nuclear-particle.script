@@ -31,12 +31,12 @@ local DRAG_COEFFICIENT 		= 0.47
 local GRAVITY			 	= -9.81
 local BOUNCE 				= 0.4
 
-local MOUSEX_SCALE 			= 0.03
+local MOUSEX_SCALE 			= 0.01
 local MOUSEY_SCALE 			= 0.01
 local CAMWERA_DISTANCE		= 350.0
 
 -- Will expose to editor
-g_startpos 	= vmath.vector3(0.0, 30.0, 0.0)
+local g_startpos 			= vmath.vector3(0.0, 30.0, 0.0)
 
 -- Heres our particle array 
 local g_particles = {}

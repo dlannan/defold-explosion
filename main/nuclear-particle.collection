@@ -230,7 +230,7 @@ embedded_instances {
   "  name: \\\"default\\\"\\n"
   "  material: \\\"/assets/materials/box.material\\\"\\n"
   "  textures {\\n"
-  "    sampler: \\\"tex0\\\"\\n"
+  "    sampler: \\\"texture_out\\\"\\n"
   "    texture: \\\"/assets/compute/data.png\\\"\\n"
   "  }\\n"
   "}\\n"
