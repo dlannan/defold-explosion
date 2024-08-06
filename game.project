@@ -31,16 +31,20 @@ bundle_identifier = com.defold.example.basic3d
 
 [graphics]
 texture_profiles = /main/default.texture_profiles
-verify_graphics_calls = 1
-max_draw_calls = 32760
+verify_graphics_calls = 0
+max_draw_calls = 2000
+max_debug_vertices = 1000
 
 [sprite]
-max_count = 5000000
+max_count = 2000
 subpixels = 0
 
 [collection]
-max_instances = 32760
+max_instances = 2000
 
 [model]
-max_count = 32760
+max_count = 2000
+
+[profiler]
+track_cpu = 0
 

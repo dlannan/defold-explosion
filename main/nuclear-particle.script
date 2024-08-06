@@ -109,22 +109,22 @@ function init(self)
 	
 	-- Keep it simple, each gets a simple pos, vel, mass
 	-- Do everything as arrays, this will keep it speedy
-	for i=1, MAX_PARTICLES do 
-		local obj = factory.create("/particles#factory", g_startpos)
-		g_particles[i] = {
-			pos = g_startpos,
-			vel = vmath.vector3(),
-			mass = PARTICLE_MASS, 				-- Not quite sure what size to use yet, depends how big this ends up.
-			p = obj,
-			force = random_three_vector(MAX_FORCE * (math.random() * 0.8 + 0.2)),
-			temp = INITIAL_TEMPERATURE - math.random() * (INITIAL_TEMPERATURE * 0.33),
-			angle = math.random() * math.pi * 2,
-			speed = math.random() * INITIAL_SPEED + (INITIAL_SPEED / 2),
-			url = msg.url(nil, obj, "model"),
-		}
-		g_particles[i].vel = random_three_vector(MAX_FORCE * (math.random() * 0.8 + 0.2))
-		g_particles[i].accel = g_particles[i].force / g_particles[i].mass + vmath.vector3(0, GRAVITY, 0) * g_particles[i].mass
-	end
+	-- for i=1, MAX_PARTICLES do 
+	-- 	local obj = factory.create("/particles#factory", g_startpos)
+	-- 	g_particles[i] = {
+	-- 		pos = g_startpos,
+	-- 		vel = vmath.vector3(),
+	-- 		mass = PARTICLE_MASS, 				-- Not quite sure what size to use yet, depends how big this ends up.
+	-- 		p = obj,
+	-- 		force = random_three_vector(MAX_FORCE * (math.random() * 0.8 + 0.2)),
+	-- 		temp = INITIAL_TEMPERATURE - math.random() * (INITIAL_TEMPERATURE * 0.33),
+	-- 		angle = math.random() * math.pi * 2,
+	-- 		speed = math.random() * INITIAL_SPEED + (INITIAL_SPEED / 2),
+	-- 		url = msg.url(nil, obj, "model"),
+	-- 	}
+	-- 	g_particles[i].vel = random_three_vector(MAX_FORCE * (math.random() * 0.8 + 0.2))
+	-- 	g_particles[i].accel = g_particles[i].force / g_particles[i].mass + vmath.vector3(0, GRAVITY, 0) * g_particles[i].mass
+	-- end
 
 	self.ready = 1.0	-- use a 3 sec count for start (to warm up renderer :) )
 	self.started = nil
@@ -154,44 +154,44 @@ function update(self, dt)
 	self.cam:update( newdt )
 
 	model.set_constant(self.skyuri, "fparams", vmath.vector4(os.clock() * self.time_speed, self.cloud_cover, self.cloud_level, self.luminance))
-	
-	if(self.started) then 
-		for i,p in ipairs(g_particles) do 
-
-			local radius = vmath.length(p.pos)
-			p.speed = vmath.length(p.vel)
-			
-			local ambientTemp = 300
-			local buoyancyForce = 0.5 * AIR_DENSITY * GRAVITY * (4/3) * math.pi * math.pow(30 / radius, 3) * (p.temp - ambientTemp) / ambientTemp;
-
-			-- Air resistance
-			local dragForce = 0.01 * AIR_DENSITY * p.speed * p.speed * DRAG_COEFFICIENT * math.pi * PARTICLE_SIZE * PARTICLE_SIZE
-			local dragDirection = vmath.vector3()
-			if(math.abs(p.speed) > 0.0) then dragDirection = -p.vel / p.speed end
-
-			-- Update velocity
-			p.vel.x = p.vel.x + (dragForce * dragDirection.x / p.mass) * newdt
-			p.vel.y = p.vel.y + (GRAVITY + dragForce * dragDirection.y / p.mass) * newdt
-			p.vel.z = p.vel.z + (dragForce * dragDirection.z / p.mass) * newdt
-						
-			-- p.force = calcAirResistance( p )
-			-- p.accel = p.force / p.mass + GRAVITY * p.mass
-			-- p.vel = p.vel + p.accel * newdt
-			p.pos = p.pos + p.vel * newdt
-			
-			if(p.pos.y < 0.0) then 
-				p.pos.y = 0.0
-				p.vel.y = -p.vel.y * BOUNCE
-			end
-
-			-- Thermal propagation
-			p.temp = p.temp - radius * 0.2 * newdt
-			if (p.temp < 300) then p.temp = 300 end
-
-			-- go.set(p.url, "tint", getColor(p.temp)) -- this doesnt work for some reason
-			go.set_position(p.pos, p.p)
-		end
-	end
+	-- 
+-- 	if(self.started) then 
+-- 		for i,p in ipairs(g_particles) do 
+-- 
+-- 			local radius = vmath.length(p.pos)
+-- 			p.speed = vmath.length(p.vel)
+-- 			
+-- 			local ambientTemp = 300
+-- 			local buoyancyForce = 0.5 * AIR_DENSITY * GRAVITY * (4/3) * math.pi * math.pow(30 / radius, 3) * (p.temp - ambientTemp) / ambientTemp;
+-- 
+-- 			-- Air resistance
+-- 			local dragForce = 0.01 * AIR_DENSITY * p.speed * p.speed * DRAG_COEFFICIENT * math.pi * PARTICLE_SIZE * PARTICLE_SIZE
+-- 			local dragDirection = vmath.vector3()
+-- 			if(math.abs(p.speed) > 0.0) then dragDirection = -p.vel / p.speed end
+-- 
+-- 			-- Update velocity
+-- 			p.vel.x = p.vel.x + (dragForce * dragDirection.x / p.mass) * newdt
+-- 			p.vel.y = p.vel.y + (GRAVITY + dragForce * dragDirection.y / p.mass) * newdt
+-- 			p.vel.z = p.vel.z + (dragForce * dragDirection.z / p.mass) * newdt
+-- 						
+-- 			-- p.force = calcAirResistance( p )
+-- 			-- p.accel = p.force / p.mass + GRAVITY * p.mass
+-- 			-- p.vel = p.vel + p.accel * newdt
+-- 			p.pos = p.pos + p.vel * newdt
+-- 			
+-- 			if(p.pos.y < 0.0) then 
+-- 				p.pos.y = 0.0
+-- 				p.vel.y = -p.vel.y * BOUNCE
+-- 			end
+-- 
+-- 			-- Thermal propagation
+-- 			p.temp = p.temp - radius * 0.2 * newdt
+-- 			if (p.temp < 300) then p.temp = 300 end
+-- 
+-- 			-- go.set(p.url, "tint", getColor(p.temp)) -- this doesnt work for some reason
+-- 			go.set_position(p.pos, p.p)
+-- 		end
+-- 	end
 	tm = tm + dt
 end
 

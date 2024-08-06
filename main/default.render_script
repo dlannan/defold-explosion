@@ -171,12 +171,14 @@ function update(self, dt)
     local constants = render.constant_buffer()
     constants.color = vmath.vector4(0.5, 0.5, 0.5, 1.0)
     constants.params = vmath.vector4(dt, 0.5, 0.5, 1.0)
+    constants.iResolution = vmath.vector4(self.TEXTURE_SIZE, self.TEXTURE_SIZE, 0, 0)
     -- Dispatch the compute program as many times as we have pixels.
     -- This constitutes our "working group". The shader will be invoked
     -- 128 x 128 x 1 times, or once per pixel.
-    render.dispatch_compute(self.TEXTURE_SIZE, self.TEXTURE_SIZE, 1)
+    render.dispatch_compute(self.TEXTURE_SIZE, self.TEXTURE_SIZE, 1, {constants = constants})
     -- when we are done with the compute program, we need to unbind it
-    render.set_compute() 
+    render.set_compute()
+         
     
     local predicates = self.predicates
     -- clear screen buffers
@@ -209,11 +211,12 @@ function update(self, dt)
     render.enable_state(render.STATE_BLEND)
     render.draw(predicates.ground, camera_world.frustum)
     render.draw(predicates.tile, camera_world.frustum)
+
+    render.enable_texture(0, self.texture_out)
     render.draw(predicates.particle, camera_world.frustum)
 
-    render.enable_texture("texture_out", self.texture_out)
     render.draw(predicates.compute, camera_world.frustum)
-    render.disable_texture("texture_out")
+    render.disable_texture(0)
     
     render.disable_state(render.STATE_DEPTH_TEST)
     
@@ -230,11 +233,9 @@ function update(self, dt)
     render.draw(predicates.debug_text, camera_gui.frustum)
     render.disable_state(render.STATE_STENCIL_TEST)
     render.disable_state(render.STATE_BLEND)
-
+    
     -- Switch buffers (like double buffering)
-    local temp = self.texture_in
-    self.texture_in = self.texture_out
-    self.texture_out = temp 
+    self.texture_in, self.texture_out = self.texture_out, self.texture_in
 end
 
 function on_message(self, message_id, message)

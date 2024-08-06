@@ -195,17 +195,17 @@ end
 -- Uses modifications in the Render_Script!!!
 local render_data = nil
 
-local function getProjection()
-
-	render_data = render_data or require("utils.module-tables")
-
-	-- Dont let initial setups be overwritten
-	gProjection = render_data.get("projection").proj
-	gView = render_data.get("projection").view
-	local w, h = window.get_size()
-	gViewport = { width = w, height = h, x = 0, y = 0 }	
-end
-
+-- local function getProjection()
+-- 
+-- 	render_data = render_data or require("utils.module-tables")
+-- 
+-- 	-- Dont let initial setups be overwritten
+-- 	gProjection = render_data.get("projection").proj
+-- 	gView = render_data.get("projection").view
+-- 	local w, h = window.get_size()
+-- 	gViewport = { width = w, height = h, x = 0, y = 0 }	
+-- end
+-- 
 -- -------------------------------------------------------------------------
 
 local function WorldToScreen(pos, updateview)
